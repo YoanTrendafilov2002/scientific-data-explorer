@@ -1,0 +1,2 @@
+"""Scientific Contract database prototype."""
+

@@ -1,0 +1,5 @@
+[
+  {"site": "0007", "time": "2026-09-25T12:00:00Z", "temperature": 20.1, "quality": "GOOD"},
+  {"site": "0007", "time": "2026-09-25T13:00:00Z", "temperature": null, "quality": "MISSING"},
+  {"site": "0007", "time": "2026-09-25T14:00:00Z", "temperature": 0, "quality": "SUSPECT"}
+]

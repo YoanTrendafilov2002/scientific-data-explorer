@@ -1,0 +1,31 @@
+1
+00:00:00,000 --> 00:00:09,000
+Scientific Data Explorer | Local data and graph selection
+
+2
+00:00:09,000 --> 00:00:30,000
+Load a public scientific CSV: Palmer Penguins, 344 records
+
+3
+00:00:30,000 --> 00:00:56,000
+Choose X and Y: flipper length versus body mass
+
+4
+00:00:56,000 --> 00:01:19,000
+Histogram: 342 numeric values; 2 missing values disclosed
+
+5
+00:01:19,000 --> 00:01:40,000
+Separate review workflow: inspect a synthetic JSON source
+
+6
+00:01:40,000 --> 00:02:20,000
+Inferred units and unfamiliar QC codes require review; planning stays blocked
+
+7
+00:02:20,000 --> 00:02:52,000
+Return to exploration: original JSON values and individual-row bars
+
+8
+00:02:52,000 --> 00:03:00,000
+Line chart preserves missing-value gaps. Exploration is not scientific approval.

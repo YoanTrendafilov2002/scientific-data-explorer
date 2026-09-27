@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scientific Discovery</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:14px;line-height:1.6;background:#f7f8fa;color:#1f2328}
+a{color:#3b82d4}
+header{background:#fff;border-bottom:1px solid #e5e7eb;padding:12px 24px;display:flex;align-items:center;gap:12px}
+header h1{font-size:16px;font-weight:600}
+header .badge{font-size:11px;padding:2px 8px;border-radius:10px;background:#e5e7eb;color:#57606a}
+main{max-width:960px;margin:24px auto;padding:0 16px;display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}
+.panel{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:16px}
+.panel h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#57606a;margin-bottom:12px}
+label{display:block;font-size:12px;color:#57606a;margin-bottom:4px;margin-top:10px}
+label:first-of-type{margin-top:0}
+input,select,textarea{width:100%;border:1px solid #e5e7eb;border-radius:4px;padding:6px 8px;font-size:13px;font-family:inherit;background:#fff;color:#1f2328}
+input:focus,select:focus,textarea:focus{outline:2px solid #3b82d4;outline-offset:1px}
+textarea{resize:vertical;min-height:60px}
+button{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;border-radius:4px;font-size:13px;font-family:inherit;cursor:pointer;font-weight:500;transition:background .15s}
+.btn-primary{background:#3b82d4;color:#fff}
+.btn-primary:hover{background:#2563c0}
+.btn-primary:disabled{background:#a0bcdf;cursor:not-allowed}
+.btn-secondary{background:#e5e7eb;color:#1f2328}
+.btn-secondary:hover{background:#d1d5db}
+.btn-sm{padding:4px 10px;font-size:12px}
+.result-area{display:flex;flex-direction:column;gap:12px}
+.state-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;letter-spacing:.02em}
+.state-draft{background:#fef3c7;color:#92400e}
+.state-needs_review{background:#fef3c7;color:#92400e}
+.state-blocked{background:#fee2e2;color:#991b1b}
+.state-approved{background:#d1fae5;color:#065f46}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px}
+.card h3{font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.card-blocked{border-color:#fca5a5;background:#fff5f5}
+.card-ok{border-color:#6ee7b7;background:#f0fdf4}
+details>summary{cursor:pointer;font-weight:500;font-size:13px;user-select:none;padding:4px 0;list-style:none}
+details>summary::before{content:"▶ ";font-size:10px;color:#57606a}
+details[open]>summary::before{content:"▼ "}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:5px 8px;background:#f7f8fa;border-bottom:1px solid #e5e7eb;font-weight:600;color:#57606a}
+td{padding:5px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top}
+tr:last-child td{border-bottom:none}
+.mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:12px}
+.muted{color:#57606a;font-size:12px}
+.err{color:#991b1b;background:#fee2e2;padding:10px 12px;border-radius:4px;font-size:13px}
+.warn{color:#92400e;background:#fef3c7;padding:8px 12px;border-radius:4px;font-size:12px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ccc;border-top-color:#3b82d4;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.approval-section{border-top:1px solid #e5e7eb;margin-top:12px;padding-top:12px}
+.q-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+.q-row .q-label{flex:0 0 auto;max-width:220px;font-size:11px;color:#57606a;padding-top:8px}
+.q-row input{flex:1}
+.steps{display:flex;flex-direction:column;gap:8px}
+.step{border-left:3px solid #3b82d4;padding:8px 12px;background:#f0f6ff;border-radius:0 4px 4px 0}
+.step h4{font-size:13px;font-weight:600;margin-bottom:2px}
+.step p{font-size:12px;color:#57606a}
+.step .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chip{font-size:11px;padding:1px 7px;border-radius:10px;background:#e5e7eb;color:#1f2328}
+.chip-in{background:#dbeafe;color:#1e40af}
+.chip-out{background:#d1fae5;color:#065f46}
+#file-list{max-height:160px;overflow-y:auto}
+#file-list button{width:100%;text-align:left;padding:5px 8px;background:none;border:none;border-radius:3px;font-size:12px;cursor:pointer;color:#1f2328;font-family:inherit}
+#file-list button:hover{background:#f0f6ff}
+</style>
+</head>
+<body>
+<header>
+  <h1>Scientific Discovery</h1>
+  <span class="badge">discovery → draft contract → review → workflow plan</span>
+</header>
+<main>
+  <!-- LEFT: Source form -->
+  <aside>
+    <div class="panel">
+      <h2>Source</h2>
+      <label>Path (relative to project root)</label>
+      <input id="path" type="text" placeholder="examples/noaa_lga_20240101.json" spellcheck="false">
+      <label>Format (leave blank to auto-detect)</label>
+      <select id="format">
+        <option value="">auto-detect</option>
+        <option value="csv">CSV</option>
+        <option value="tsv">TSV</option>
+        <option value="json">JSON</option>
+        <option value="jsonl">JSONL</option>
+        <option value="sqlite">SQLite</option>
+        <option value="noaa-global-hourly">NOAA Global Hourly</option>
+      </select>
+      <label>Table (SQLite only)</label>
+      <input id="table" type="text" placeholder="table_name">
+      <label>JSON records key (optional)</label>
+      <input id="records_key" type="text" placeholder="results">
+      <label>Sampling limit (rows; blank = full scan)</label>
+      <input id="sampling_limit" type="number" min="1" placeholder="unlimited">
+      <label>Provider (metadata)</label>
+      <input id="provider" type="text" placeholder="e.g. NOAA NCEI">
+      <label>Documentation URL (metadata)</label>
+      <input id="documentation" type="text" placeholder="https://...">
+      <label>Instrument (metadata)</label>
+      <input id="instrument" type="text" placeholder="e.g. Barometric pressure sensor">
+      <label style="margin-top:14px">Desired outcome (for workflow plan)</label>
+      <textarea id="outcome" placeholder="e.g. Create a daily summary of valid observations"></textarea>
+      <button class="btn-primary" id="run-btn" style="width:100%;margin-top:12px" onclick="runDiscovery()">
+        <span id="spin" style="display:none" class="spinner"></span>
+        <span id="run-label">Inspect Source</span>
+      </button>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <h2>Project files</h2>
+      <div id="file-list"><span class="muted">Loading…</span></div>
+    </div>
+  </aside>
+
+  <!-- RIGHT: Results -->
+  <section class="result-area" id="results">
+    <div class="card">
+      <h3>Getting started</h3>
+      <p class="muted">Enter a file path on the left (or click a project file), then click <strong>Inspect Source</strong>.</p>
+      <p class="muted" style="margin-top:6px">The discovery layer runs layers 1–4 (inventory → recognition → draft contract) and optionally layer 5 (workflow plan) when you provide a desired outcome. No data is written.</p>
+      <p class="muted" style="margin-top:6px">A contract in <span class="state-badge state-blocked">blocked</span> or <span class="state-badge state-needs_review">needs_review</span> state cannot produce a workflow plan until all questions are answered.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = window.location.origin;
+
+// Load file list on startup
+(async()=>{
+  try{
+    const r = await fetch(API+'/api/files');
+    const d = await r.json();
+    const el = document.getElementById('file-list');
+    if(!d.files||!d.files.length){el.innerHTML='<span class="muted">No files found</span>';return;}
+    el.innerHTML = d.files.map(f=>`<button onclick="pickFile('${f}')">${f}</button>`).join('');
+  }catch(e){
+    document.getElementById('file-list').innerHTML='<span class="muted">Server not running</span>';
+  }
+})();
+
+function pickFile(f){
+  document.getElementById('path').value = f;
+  // Auto-detect noaa
+  if(f.includes('noaa')&&f.endsWith('.json')) document.getElementById('format').value='noaa-global-hourly';
+  else document.getElementById('format').value='';
+}
+
+function g(id){return document.getElementById(id).value.trim();}
+
+function setLoading(v){
+  document.getElementById('run-btn').disabled = v;
+  document.getElementById('spin').style.display = v ? 'inline-block' : 'none';
+  document.getElementById('run-label').textContent = v ? 'Inspecting…' : 'Inspect Source';
+}
+
+async function runDiscovery(){
+  const path = g('path');
+  if(!path){alert('Please enter a file path.');return;}
+  setLoading(true);
+  const body = {
+    path,
+    format: g('format')||undefined,
+    table: g('table')||undefined,
+    records_key: g('records_key')||undefined,
+    sampling_limit: g('sampling_limit')?parseInt(g('sampling_limit')):undefined,
+    provider: g('provider')||undefined,
+    documentation: g('documentation')||undefined,
+    instrument: g('instrument')||undefined,
+    outcome: g('outcome')||undefined,
+  };
+  // Remove undefined
+  Object.keys(body).forEach(k=>body[k]===undefined&&delete body[k]);
+  try{
+    const r = await fetch(API+'/api/discover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    render(d, body);
+  }catch(e){
+    document.getElementById('results').innerHTML=`<div class="err">Could not reach server: ${e.message}<br>Is <code>python scripts/ui_server.py</code> running?</div>`;
+  }finally{
+    setLoading(false);
+  }
+}
+
+function render(data, req){
+  req=Object.assign({},req);
+  if(data.source_revision) req.source_revision=data.source_revision;
+  const res = document.getElementById('results');
+  res.innerHTML = '';
+  if(data.error&&!data.contract){res.innerHTML=`<div class="err">${esc(data.error)}</div>`;return;}
+  if(data.error){const e=el('div','err');e.textContent=data.error;res.appendChild(e);}
+  const c = data.contract;
+  if(!c){res.innerHTML='<div class="err">Unexpected response</div>';return;}
+  res.appendChild(renderContractSummary(c, data, req));
+  if(c.blocked_reasons&&c.blocked_reasons.length) res.appendChild(renderBlocks(c.blocked_reasons));
+  // Show review form for needs_review OR for draft/approved with no open questions
+  // (Fix 5: clean draft must also have an explicit approval path)
+  if(c.state !== 'approved'){
+    res.appendChild(renderUnitCorrections(c, req));
+    res.appendChild(renderReview(c, req));
+  }
+  res.appendChild(renderFields(c));
+  if(data.workflow_plan) res.appendChild(renderWorkflow(data.workflow_plan, req, c));
+}
+
+function renderContractSummary(c, data, req){
+  const inv = c.inventory;
+  const conn = inv?inv.connector:{};
+  const state = c.state||'draft';
+  const div = el('div','card');
+  div.innerHTML = `
+    <h3>Contract <span class="state-badge state-${state}">${state}</span></h3>
+    <table style="margin-top:8px">
+      <tr><th>Source</th><td class="mono">${esc(conn.path||'')}</td></tr>
+      <tr><th>Format</th><td>${esc(conn.format||'')}</td></tr>
+      ${conn.table?`<tr><th>Table</th><td class="mono">${esc(conn.table)}</td></tr>`:''}
+      <tr><th>Rows scanned</th><td>${conn.row_count_estimate!=null?conn.row_count_estimate:(conn.sampling_complete?'0':'partial')}</td></tr>
+      <tr><th>Fields</th><td>${(c.variable_mappings||[]).length}</td></tr>
+      <tr><th>Blocks</th><td>${(c.blocked_reasons||[]).length}</td></tr>
+      <tr><th>Unresolved</th><td>${(c.unresolved_questions||[]).length}</td></tr>
+    </table>
+    ${inv&&inv.warnings&&inv.warnings.length?`<div class="warn" style="margin-top:8px">${inv.warnings.map(esc).join('<br>')}</div>`:''}
+    ${c.review_notes?`<details style="margin-top:8px"><summary>Review notes</summary><pre style="font-size:11px;white-space:pre-wrap;margin-top:6px;color:#57606a">${esc(c.review_notes)}</pre></details>`:''}
+  `;
+  return div;
+}
+
+function renderBlocks(blocks){
+  const div = el('div','card card-blocked');
+  div.innerHTML = `<h3>⛔ Blocking conditions (${blocks.length})</h3>`;
+  blocks.forEach(b=>{
+    const p = document.createElement('p');
+    p.style.marginTop='6px';
+    p.innerHTML = `<strong>${esc(b.code)}</strong>${b.field?` — <span class="mono">${esc(b.field)}</span>`:''}: ${esc(b.detail)}`;
+    div.appendChild(p);
+  });
+  return div;
+}
+
+function renderUnitCorrections(c, req){
+  const box=el('details','card');
+  const title=el('summary');title.textContent='Correct unit interpretations (does not convert values)';box.appendChild(title);
+  const controls=[];
+  (c.variable_mappings||[]).forEach(m=>{
+    const row=el('div','q-row');const label=el('label');label.textContent=m.source_field+' — proposed '+m.proposed_unit;
+    const unit=document.createElement('input');unit.placeholder='Correct unit (leave blank to retain)';
+    const evidence=document.createElement('input');evidence.placeholder='Evidence / documentation for this correction';
+    label.appendChild(unit);row.appendChild(label);row.appendChild(evidence);box.appendChild(row);
+    controls.push({field:m.source_field,unit,evidence});
+  });
+  const button=el('button','btn-primary');button.textContent='Apply corrections and review again';
+  button.onclick=async()=>{
+    const unit_overrides=Object.assign({},req.unit_overrides||{});
+    for(const c of controls){if(c.unit.value.trim()){
+      if(!c.evidence.value.trim()){alert('Provide evidence for '+c.field);return;}
+      unit_overrides[c.field]={unit:c.unit.value.trim(),evidence:c.evidence.value.trim()};
+    }}
+    const body=Object.assign({},req,{unit_overrides});
+    ['answers','approver','decision','question_decisions','step_confirmations'].forEach(k=>delete body[k]);
+    setLoading(true);
+    try{const r=await fetch(API+'/api/discover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});render(await r.json(),body);}
+    catch(e){alert('Server error: '+e.message);}finally{setLoading(false);}
+  };
+  box.appendChild(button);return box;
+}
+function renderReview(c, req){
+  const questions = c.unresolved_questions||[];
+  const hasQuestions = questions.length > 0;
+  const div = el('div','card');
+  // Style differently for clean draft vs needs_review
+  if(!hasQuestions){
+    div.className='card card-ok';
+    div.innerHTML=`<h3>Ready to approve</h3>
+      <p class="muted">No open questions. Provide your name and click <strong>Approve Contract</strong> to record your decision and unlock workflow planning.</p>`;
+  } else {
+    div.innerHTML=`<h3>Review required (${questions.length} question${questions.length===1?'':'s'})</h3>
+      <p class="muted">Choose a decision for each question and record evidence. Notes alone never approve a question. Request changes if an interpretation is incorrect.</p>`;
+  }
+  const form = el('div','approval-section');
+  const inputs = [];
+  questions.forEach((q,i)=>{
+    const row = el('div','q-row');
+    const lbl = el('div','q-label');
+    lbl.title = q;
+    lbl.textContent = q.length>80?q.slice(0,77)+'…':q;
+    const inp = document.createElement('input');
+    inp.type='text';
+    inp.placeholder='Affirmative answer (e.g. "Confirmed: values are in °C")';
+    inp.id=`qa_${i}`;
+    const decision=decisionSelect();
+    inputs.push({q, inp, decision});
+    row.appendChild(lbl);
+    row.appendChild(decision);
+    row.appendChild(inp);
+    form.appendChild(row);
+  });
+  const approverRow = el('div','q-row');
+  const approverLbl = el('div','q-label');
+  approverLbl.textContent='Approver name / role';
+  const approverInp = document.createElement('input');
+  approverInp.type='text';
+  approverInp.placeholder='e.g. Dr. Smith';
+  approverInp.id='approver_name';
+  approverRow.appendChild(approverLbl);
+  approverRow.appendChild(approverInp);
+  form.appendChild(approverRow);
+  const overall=decisionSelect();
+  const overallLabel=el('label');overallLabel.textContent='Overall contract decision';
+  overallLabel.appendChild(overall);form.appendChild(overallLabel);
+  const submitBtn = document.createElement('button');
+  submitBtn.className='btn-primary btn-sm';
+  submitBtn.style.marginTop='8px';
+  submitBtn.textContent = hasQuestions ? 'Submit Approval' : 'Approve Contract';
+  submitBtn.onclick = ()=>{
+    const approver = document.getElementById('approver_name').value.trim();
+    if(!approver){alert('Please enter your name.');return;}
+    const answers = {};
+    const question_decisions = {};
+    let ok = true;
+    inputs.forEach(({q,inp,decision})=>{
+      if(overall.value==='approve'&&!inp.value.trim()){alert(`Please answer: ${q.slice(0,60)}`);ok=false;return;}
+      answers[q]=inp.value.trim();
+      question_decisions[q]=decision.value;
+    });
+    if(!ok) return;
+    submitApproval(req, answers, approver, overall.value, question_decisions);
+  };
+  form.appendChild(submitBtn);
+  div.appendChild(form);
+  return div;
+}
+
+async function submitApproval(req, answers, approver, decision, question_decisions){
+  const body = Object.assign({}, req, {answers, approver, decision, question_decisions, step_confirmations:{}});
+  Object.keys(body).forEach(k=>body[k]===undefined&&delete body[k]);
+  const btn = document.getElementById('run-btn');
+  btn.disabled=true;
+  document.getElementById('spin').style.display='inline-block';
+  try{
+    const r = await fetch(API+'/api/discover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    render(d, body);
+  }catch(e){
+    alert('Server error: '+e.message);
+  }finally{
+    btn.disabled=false;
+    document.getElementById('spin').style.display='none';
+  }
+}
+
+function renderFields(c){
+  const mappings = c.variable_mappings||[];
+  const div = el('div','card');
+  div.innerHTML = `<h3>Fields (${mappings.length})</h3>`;
+  if(!mappings.length){div.innerHTML+='<p class="muted">No fields found.</p>';return div;}
+  const tbl = document.createElement('table');
+  tbl.innerHTML=`<thead><tr><th>Field</th><th>Classification</th><th>Unit</th><th>Level</th><th>Confidence</th><th>Unresolved</th></tr></thead>`;
+  const tb = document.createElement('tbody');
+  mappings.forEach(m=>{
+    const maxConf = m.evidence&&m.evidence.length?Math.max(...m.evidence.map(e=>e.confidence||0)):0;
+    const tr = document.createElement('tr');
+    tr.innerHTML=`
+      <td class="mono">${esc(m.source_field)}</td>
+      <td><span style="font-size:11px">${esc(m.classification)}</span></td>
+      <td class="mono">${esc(m.proposed_unit)}</td>
+      <td>${esc(m.processing_level)}</td>
+      <td>${(maxConf*100).toFixed(0)}%</td>
+      <td>${m.unresolved&&m.unresolved.length?`<span style="color:#b45309">⚠ ${m.unresolved.length}</span>`:'<span style="color:#059669">✓</span>'}</td>
+    `;
+    // Expandable evidence row
+    if(m.evidence&&m.evidence.length){
+      tr.style.cursor='pointer';
+      tr.title='Click for evidence';
+      tr.onclick=()=>toggleEvidence(m,tr);
+    }
+    tb.appendChild(tr);
+  });
+  tbl.appendChild(tb);
+  div.appendChild(tbl);
+  return div;
+}
+
+function toggleEvidence(m, tr){
+  const existing = tr.nextSibling;
+  if(existing&&existing.classList&&existing.classList.contains('evidence-row')){
+    existing.remove(); return;
+  }
+  const etr = document.createElement('tr');
+  etr.className='evidence-row';
+  const td = document.createElement('td');
+  td.colSpan=6;
+  td.style.background='#f7f8fa';
+  td.style.padding='8px 12px';
+  let html='<strong style="font-size:11px">Evidence:</strong><ul style="margin:4px 0 0 16px;font-size:11px">';
+  (m.evidence||[]).forEach(e=>{
+    html+=`<li>${esc(e.source)}: ${esc(e.observation)} <span class="muted">(${(e.confidence*100).toFixed(0)}%)</span></li>`;
+  });
+  html+='</ul>';
+  if(m.unresolved&&m.unresolved.length){
+    html+='<strong style="font-size:11px;color:#b45309">Unresolved:</strong><ul style="margin:4px 0 0 16px;font-size:11px;color:#92400e">';
+    m.unresolved.forEach(u=>{html+=`<li>${esc(u)}</li>`;});
+    html+='</ul>';
+  }
+  td.innerHTML=html;
+  etr.appendChild(td);
+  tr.parentNode.insertBefore(etr, tr.nextSibling);
+}
+
+function renderWorkflow(plan, req, contract){
+  const div = el('div','card');
+  const isBlocked = plan.blocked_reasons&&plan.blocked_reasons.length;
+  div.className='card '+(isBlocked?'card-blocked':'card-ok');
+  div.innerHTML=`<h3>Workflow plan <span class="state-badge state-${isBlocked?'blocked':'approved'}">${isBlocked?'blocked':'reviewed plan'}</span></h3>
+    <p class="muted" style="margin-bottom:8px">${esc(plan.outcome_description)}</p>`;
+
+  const steps=plan.steps||[];
+
+  if(isBlocked){
+    // Separate contract-level blocks from unconfirmed step decisions
+    const stepDecisions = (plan.blocked_reasons||[]).filter(r=>r.startsWith("Step '"));
+    const otherBlocks = (plan.blocked_reasons||[]).filter(r=>!r.startsWith("Step '"));
+    if(otherBlocks.length){
+      const b=el('div','err');
+      b.innerHTML='<strong>Blocked:</strong><br>'+otherBlocks.map(esc).join('<br>');
+      div.appendChild(b);
+    }
+    // Render step confirmations form when only step decisions are unconfirmed
+    if(stepDecisions.length){
+      div.appendChild(renderStepConfirmations(steps, stepDecisions, plan, req));
+    }
+    // Still render the steps so the user can see what's proposed
+    if(steps.length) div.appendChild(renderStepList(steps));
+    return div;
+  }
+
+  if(plan.warnings&&plan.warnings.length){
+    const w=el('div','warn');
+    w.style.marginTop='6px';
+    w.innerHTML=plan.warnings.map(esc).join('<br>');
+    div.appendChild(w);
+  }
+  if(steps.length){
+    div.appendChild(renderStepList(steps));
+  }else{
+    div.innerHTML+='<p class="muted">No steps generated.</p>';
+  }
+  if(steps.length) div.appendChild(renderExecution(plan,req,contract));
+  return div;
+}
+
+function renderExecution(plan,req,contract){
+  const box=el('div','card');
+  box.innerHTML='<h3>Execute workflow</h3><p>Choose exact settings. Preview reads the full source and calculates results in memory. Approval then saves JSON results and provenance in a new workflow_runs folder. Source data is never overwritten. No calibration or unit conversion is applied.</p>';
+  const names=plan.steps.map(s=>s.name);
+  const aggregate=names.includes('temporal_aggregation')||names.includes('aggregate_records');
+  const temporal=names.includes('temporal_aggregation');
+  const mappings=contract.variable_mappings||[];
+  const controls={};
+  const result=el('div');
+  function addSelect(key,label,options){
+    const wrap=el('label');wrap.textContent=label;
+    const input=el('select');input.setAttribute('aria-label',label);
+    [['','Choose…'],...options].forEach(([value,text])=>{const o=el('option');o.value=value;o.textContent=text;input.appendChild(o);});
+    input.onchange=()=>result.replaceChildren();wrap.appendChild(input);box.appendChild(wrap);controls[key]=input;
+  }
+  function addText(key,label,placeholder){
+    const wrap=el('label');wrap.textContent=label;const input=el('input');input.placeholder=placeholder;input.setAttribute('aria-label',label);
+    input.oninput=()=>result.replaceChildren();wrap.appendChild(input);box.appendChild(wrap);controls[key]=input;
+  }
+  const choices=role=>mappings.filter(m=>!role||role.includes(m.classification)).map(m=>[m.source_field,m.source_field]);
+  if(names.includes('apply_qc_filter')){
+    addSelect('qc_field','QC field',choices(['QUALITY_CONTROL']));
+    addText('accepted_qc','Accepted QC codes (JSON array)','["GOOD"]');
+  }
+  if(aggregate){
+    addSelect('value_field','Measurement field',choices(['DIRECT_MEASUREMENT','CALIBRATED_MEASUREMENT']));
+    addText('group_by','Grouping fields (JSON array; [] means all records)','["site"]');
+    addSelect('method','Aggregation method',[['mean','Arithmetic mean'],['sum','Sum'],['min','Minimum'],['max','Maximum']]);
+    addSelect('weighting','Sample weighting',[['equal','Equal sample weights']]);
+    addSelect('missing_values','Null or blank measurements',[['reject','Reject the run'],['drop','Drop and count missing measurements']]);
+  }
+  if(temporal){
+    addSelect('timestamp_field','Timestamp field',choices(['COORDINATE']));
+    addSelect('period','UTC aggregation period',[['hourly','Hourly'],['daily','Daily'],['monthly','Monthly']]);
+  }
+  const preview=el('button','btn-primary');preview.textContent='Calculate preview';
+  preview.onclick=async()=>{
+    result.replaceChildren();preview.disabled=true;
+    try{
+      const settings={};for(const [key,input] of Object.entries(controls)){
+        if(!input.value.trim())throw Error('Choose or enter '+input.getAttribute('aria-label'));
+        settings[key]=['accepted_qc','group_by'].includes(key)?JSON.parse(input.value):input.value;
+      }
+      const r=await fetch(API+'/api/prepare-execution',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},req,{settings}))});
+      const d=await r.json();if(!r.ok)throw Error(d.error||'Preview failed');
+      const h=el('h3');h.textContent='Calculated preview — not yet saved';result.appendChild(h);
+      const pre=el('pre');pre.style.whiteSpace='pre-wrap';pre.textContent=JSON.stringify({settings:d.settings,counts:d.counts,first_records:d.preview},null,2);result.appendChild(pre);
+      const warning=el('p');warning.textContent=d.notice+' Preview expires in 10 minutes.';result.appendChild(warning);
+      const name=el('input');name.placeholder='Execution approver name';name.setAttribute('aria-label','Execution approver name');result.appendChild(name);
+      const label=el('label');const check=el('input');check.type='checkbox';check.style.width='auto';label.appendChild(check);label.appendChild(document.createTextNode(' I approve these exact settings and the preview for saving.'));result.appendChild(label);
+      const run=el('button','btn-primary');run.textContent='Execute and save results';result.appendChild(run);
+      run.onclick=async()=>{
+        if(!check.checked||!name.value.trim()){alert('Enter your name and approve the preview first.');return;}
+        run.disabled=true;
+        try{
+          const rr=await fetch(API+'/api/execute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({execution_ticket:d.execution_ticket,decision:'approve',approved_by:name.value.trim()})});
+          const done=await rr.json();if(!rr.ok)throw Error(done.error||'Execution failed');
+          result.replaceChildren();const title=el('h3');title.textContent='Execution complete';result.appendChild(title);
+          const summary=el('p');summary.textContent='Run '+done.run_id+' • '+done.counts.output_rows+' output records. Source unchanged.';result.appendChild(summary);
+          for(const [text,url] of [['Open result JSON',done.result_url],['Open provenance JSON',done.provenance_url]]){const a=el('a');a.href=url;a.target='_blank';a.rel='noopener';a.textContent=text;a.style.display='block';result.appendChild(a);}
+        }catch(e){const error=el('p','err');error.textContent=e.message+' Calculate a new preview to retry.';result.appendChild(error);}
+      };
+    }catch(e){const error=el('p','err');error.textContent=e.message;result.appendChild(error);}finally{preview.disabled=false;}
+  };
+  box.appendChild(preview);box.appendChild(result);return box;
+}
+
+function renderStepList(steps){
+  const sd=el('div','steps');
+  steps.forEach((s,i)=>{
+    const step=el('div','step');
+    step.innerHTML=`<h4>${i+1}. ${esc(s.name.replace(/_/g,' '))}</h4>
+      <p>${esc(s.description)}</p>
+      <div class="chips" style="margin-top:6px">
+        ${(s.inputs||[]).map(x=>`<span class="chip chip-in">in: ${esc(x)}</span>`).join('')}
+        ${(s.outputs||[]).map(x=>`<span class="chip chip-out">out: ${esc(x)}</span>`).join('')}
+      </div>
+      ${s.implementation_note?`<p class="muted" style="margin-top:4px;font-size:11px">${esc(s.implementation_note)}</p>`:''}
+      ${s.required_approvals&&s.required_approvals.length?`<div class="chips" style="margin-top:4px">${s.required_approvals.map(r=>`<span class="chip chip-req" title="${esc(r)}">&#10003; ${esc(r.length>40?r.slice(0,37)+'…':r)}</span>`).join('')}</div>`:''}`;
+    sd.appendChild(step);
+  });
+  return sd;
+}
+
+function renderStepConfirmations(steps, unconfirmedMessages, plan, req){
+  // Collect all unique required_approvals across all steps
+  const allRequired = [];
+  const seen = new Set();
+  steps.forEach(s=>{
+    (s.required_approvals||[]).forEach(r=>{
+      if(!seen.has(r)){seen.add(r);allRequired.push(r);}
+    });
+  });
+  const div=el('div','card card-review');
+  div.style.marginTop='10px';
+  div.innerHTML=`<h3>Step decisions required (${allRequired.length})</h3>
+    <p class="muted">Each step has processing decisions that must be explicitly confirmed before the workflow can be unlocked. These are separate from the data contract.</p>`;
+  const inputs=[];
+  allRequired.forEach((r,i)=>{
+    const row=el('div','q-row');
+    const lbl=el('div','q-label');
+    lbl.title=r; lbl.textContent=r.length>70?r.slice(0,67)+'…':r;
+    const inp=document.createElement('input');
+    inp.type='text';inp.placeholder='e.g. arithmetic mean';
+    const decision=decisionSelect();
+    inputs.push({r,inp,decision});
+    row.appendChild(lbl);row.appendChild(decision);row.appendChild(inp);
+    div.appendChild(row);
+  });
+  const btn=el('button','btn-primary btn-sm','Confirm Step Decisions');
+  btn.textContent='Submit Step Decisions';
+  btn.style.marginTop='8px';
+  btn.onclick=()=>{
+    const step_confirmations={};let ok=true;
+    inputs.forEach(({r,inp,decision})=>{
+      if(!inp.value.trim()){alert('Please confirm: '+r.slice(0,60));ok=false;return;}
+      step_confirmations[r]={decision:decision.value,note:inp.value.trim()};
+    });
+    if(!ok) return;
+    submitStepConfirmations(req, step_confirmations);
+  };
+  div.appendChild(btn);
+  return div;
+}
+
+async function submitStepConfirmations(req, step_confirmations){
+  const body=Object.assign({},req,{step_confirmations});
+  Object.keys(body).forEach(k=>body[k]===undefined&&delete body[k]);
+  setLoading(true);
+  try{
+    const r=await fetch(API+'/api/discover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    render(d,body);
+  }catch(e){alert('Server error: '+e.message);}
+  finally{setLoading(false);}
+}
+
+function decisionSelect(){
+  const select=document.createElement('select');
+  select.setAttribute('aria-label','Review decision');
+  [['request_changes','Request changes / unresolved'],['approve','Approve'],['reject','Reject']].forEach(([value,label])=>{
+    const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);
+  });
+  return select;
+}
+function el(tag, cls){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  return e;
+}
+function esc(s){
+  if(s==null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

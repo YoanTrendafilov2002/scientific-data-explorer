@@ -1,0 +1,36 @@
+flowchart LR
+  n_observation_id["observation_id\nMETADATA"]
+  n_observed_at["observed_at\nCOORDINATE"]
+  n_station_id["station_id\nMETADATA"]
+  n_raw_temperature_c["raw_temperature_c\nRAW_ACQUISITION"]
+  n_qc_flag["qc_flag\nQUALITY_CONTROL"]
+  n_calibration_scale["calibration_scale\nCALIBRATION_DATA"]
+  n_calibration_offset_c["calibration_offset_c\nCALIBRATION_DATA"]
+  n_calibrated_temperature_c["calibrated_temperature_c\nCALIBRATED_MEASUREMENT"]
+  n_temperature_k["temperature_k\nSCIENTIFIC_INTERMEDIATE"]
+  n_qc_valid_temperature_k["qc_valid_temperature_k\nSCIENTIFIC_INTERMEDIATE"]
+  n_daily_mean_temperature_k["daily_mean_temperature_k\nDERIVED_PRODUCT"]
+  n_valid_observation_count["valid_observation_count\nQUALITY_CONTROL"]
+  n_T001{"T001: apply_temporal_calibration"}
+  n_raw_temperature_c --> n_T001
+  n_calibration_scale --> n_T001
+  n_calibration_offset_c --> n_T001
+  n_observed_at --> n_T001
+  n_T001 --> n_calibrated_temperature_c
+  n_T002{"T002: celsius_to_kelvin"}
+  n_calibrated_temperature_c --> n_T002
+  n_T002 --> n_temperature_k
+  n_T003{"T003: good_only_quality_gate"}
+  n_temperature_k --> n_T003
+  n_qc_flag --> n_T003
+  n_T003 --> n_qc_valid_temperature_k
+  n_T004{"T004: daily_arithmetic_mean"}
+  n_qc_valid_temperature_k --> n_T004
+  n_observed_at --> n_T004
+  n_station_id --> n_T004
+  n_T004 --> n_daily_mean_temperature_k
+  n_T004 --> n_valid_observation_count
+  n_src_database_pipeline_py__build_daily_temperature_product_calibrated_CTE[["build_daily_temperature_product.calibrated CTE"]] -. implements .-> n_T001
+  n_src_database_pipeline_py__KELVIN_OFFSET_and_build_daily_temperature_product_valid_kelvin_CTE[["KELVIN_OFFSET and build_daily_temperature_product.valid_kelvin CTE"]] -. implements .-> n_T002
+  n_src_database_pipeline_py__build_daily_temperature_product_valid_kelvin_CTE[["build_daily_temperature_product.valid_kelvin CTE"]] -. implements .-> n_T003
+  n_src_database_pipeline_py__build_daily_temperature_product_final_SELECT[["build_daily_temperature_product final SELECT"]] -. implements .-> n_T004

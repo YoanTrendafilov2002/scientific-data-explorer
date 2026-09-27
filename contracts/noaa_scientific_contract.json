@@ -1,0 +1,66 @@
+{
+  "metadata": {"contract_version": "0.2", "domain": "surface_meteorology", "scope": "Native Global Hourly temperature and sea-level pressure ingestion"},
+  "source": {
+    "provider": "NOAA NCEI",
+    "dataset": "Global Hourly / ISD",
+    "documentation": "https://www.ncei.noaa.gov/pub/data/noaa/isd-format-document.pdf",
+    "instrument": {"manufacturer": null, "model": null, "measurement_principle": null},
+    "instrument_details_status": "Not established by this extract; do not infer a specific sensor or calibration model",
+    "expected_quantities": ["reported_air_temperature", "reported_sea_level_pressure"],
+    "directly_measures": [],
+    "note": "A published observational dataset, not raw instrument acquisition."
+  },
+  "variables": {
+    "TMP": {"classification": "METADATA", "description": "Encoded source temperature and QC pair; original text retained"},
+    "temperature_c": {"classification": "DIRECT_MEASUREMENT", "unit": "degC", "dimensions": ["observation"], "description": "Reported air temperature decoded from source; not claimed to be uncalibrated sensor output", "dependencies": ["TMP"], "quality_dependencies": ["temperature_qc"]},
+    "temperature_qc": {"classification": "QUALITY_CONTROL", "dependencies": ["TMP"]},
+    "SLP": {"classification": "METADATA", "description": "Encoded source sea-level pressure and QC pair; original text retained; absent from some record types (e.g. SOD, SOM, SPECI without full obs)"},
+    "sea_level_pressure_hpa": {"classification": "DIRECT_MEASUREMENT", "unit": "hPa", "dimensions": ["observation"], "description": "Reported sea-level pressure decoded from source; 99999 missing sentinel decoded to null; not subject to calibration or altitude reduction here", "dependencies": ["SLP"], "quality_dependencies": ["slp_qc"], "optional": true},
+    "slp_qc": {"classification": "QUALITY_CONTROL", "dependencies": ["SLP"], "optional": true},
+    "observed_at": {"classification": "COORDINATE", "datatype": "UTC datetime", "dependencies": ["DATE"]},
+    "station_id": {"classification": "METADATA", "datatype": "string", "dependencies": ["STATION"]}
+  },
+  "transformations": {
+    "decode_temperature": {
+      "inputs": ["TMP"], "outputs": ["temperature_c", "temperature_qc"],
+      "operation": "Split signed integer and QC code; +9999 becomes null, otherwise divide integer by 10. Preserve QC verbatim.",
+      "assumptions": ["native_encoding"], "calibration_dependencies": [],
+      "implementation": {"file": "src/noaa_adapter.py", "function": "read_noaa"},
+      "validation": {"test": "tests/test_inspector.py::NoaaTMPTests::test_tmp_decode", "absolute_tolerance": 1e-12}
+    },
+    "decode_slp": {
+      "inputs": ["SLP"], "outputs": ["sea_level_pressure_hpa", "slp_qc"],
+      "operation": "Split unsigned 5-digit integer and QC code; 99999 becomes null, otherwise divide integer by 10 to obtain hPa. Preserve QC verbatim. SLP field is optional; absent rows emit no SLP decoded fields.",
+      "assumptions": ["native_encoding", "slp_optional"],
+      "calibration_dependencies": [],
+      "implementation": {"file": "src/noaa_adapter.py", "function": "read_noaa"},
+      "validation": {
+        "test": "tests/test_inspector.py::NoaaSLPTests",
+        "absolute_tolerance": 1e-12,
+        "notes": "Range check uses ISD-documented 860–1090 hPa; no altitude reduction or calibration is applied"
+      }
+    },
+    "declare_source_utc": {
+      "inputs": ["DATE"], "outputs": ["observed_at"],
+      "operation": "Validate the native timestamp and make the documented UTC timezone explicit; no time shift.",
+      "implementation": {"file": "src/noaa_adapter.py", "function": "read_noaa"},
+      "validation": {"test": "tests/test_inspector.py::NoaaTMPTests::test_tmp_decode"}
+    }
+  },
+  "assumptions": {
+    "native_encoding": "Input is native Global Hourly TMP/SLP, not a units-converted or reformatted export",
+    "slp_optional": "SLP field is present only for hourly surface reports (FM-12, FM-15, FM-16 etc.); daily summary (SOD, SOM) and some special reports omit it"
+  },
+  "calibration": {"status": "Upstream processing not reproduced; no coefficients applied here"},
+  "quality_rules": {"reading": "Retain all rows including suspect and erroneous codes", "publication": "Not implemented; recognizing a QC code does not approve a measurement"},
+  "validation_rules": {"executable_contract": "contracts/noaa_ingestion.json", "engine": "src/data_inspector.py::inspect_data", "scope": "Nonempty input, required fields, types, UTC, range, unit and recognized QC codes only"},
+  "reference_datasets": [{"input": "examples/noaa_lga_20240101.json", "role": "Real-source integration sample, not independent scientific ground truth"}],
+  "implementation_mapping": [{"function": "src/noaa_adapter.py::read_noaa", "transformations": ["decode_temperature", "decode_slp", "declare_source_utc"], "validation": ["contracts/noaa_ingestion.json", "tests/test_inspector.py"]}],
+  "limitations": [
+    "This manifest documents relationships; automatic impact graph generation from it is not implemented",
+    "No downstream aggregation or product validation",
+    "No instrument-level physics validation",
+    "SLP is reported at sea level; station-elevation reduction is performed upstream by NOAA, not reproduced here",
+    "Range limits follow ISD-documented field bounds, not an independent climatological model"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/scientific-contract.schema.json",
+  "title": "Scientific Data Contract",
+  "type": "object",
+  "required": [
+    "contract_version", "data_source", "files", "variables", "transformations",
+    "validation_rules", "reference_datasets", "assumptions", "quality_rules", "code_mappings"
+  ],
+  "properties": {
+    "contract_version": {"type": "string"},
+    "data_source": {"type": "object", "required": ["kind", "description"]},
+    "files": {"type": "array", "items": {"type": "object", "required": ["path", "role", "format"]}},
+    "tables": {"type": "array", "items": {"type": "object", "required": ["name", "classification"]}},
+    "variables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "classification", "processing_level", "datatype", "units", "dimensions", "source", "dependencies", "associated_qc_variables"]
+      }
+    },
+    "transformations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "inputs", "outputs", "description", "input_units", "output_units", "scientific_assumptions", "implementation_file", "implementation_symbol", "validation_tolerance"]
+      }
+    },
+    "validation_rules": {"type": "array"},
+    "reference_datasets": {"type": "array"},
+    "assumptions": {"type": "array"},
+    "quality_rules": {"type": "array"},
+    "code_mappings": {"type": "array"}
+  },
+  "additionalProperties": true
+}

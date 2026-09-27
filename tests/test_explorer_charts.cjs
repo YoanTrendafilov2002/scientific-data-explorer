@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const {numeric,chartData}=require('../ui/explorer.js');
+for(const v of [null,true,false,{},[], '', '  ', 'NA','0x10','Infinity','1e999'])assert.equal(numeric(v),null);
+assert.equal(numeric('0'),0);assert.equal(numeric('-1.5e2'),-150);
+let result=chartData([{v:0},{v:null},{v:2}],'line','','v');
+assert.equal(result.invalid,1);assert.equal(result.points[1],null);assert.equal(result.valid,2);
+result=chartData(Array.from({length:11},(_,v)=>({v})),'histogram','','v');
+assert.equal(result.points.length,10);assert.equal(result.points.reduce((n,p)=>n+p.y,0),11);assert.equal(result.points[9].y,2);
+result=chartData([{v:5},{v:5}],'histogram','','v');assert.equal(result.points.length,1);assert.equal(result.points[0].y,2);
+assert.throws(()=>chartData(Array.from({length:41},()=>({v:1})),'bar','','v'),/40 rows/);
+assert.throws(()=>chartData([{x:'text',v:2}],'scatter','x','v'),/No valid/);
+console.log('Chart calculations passed: numeric parsing, gaps, histogram edges/counts, constant values, bar limit, invalid scatter.');

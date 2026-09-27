@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "fields": {
+    "station_id": {"type": "string"},
+    "observed_at": {"type": "utc_timestamp"},
+    "temperature_c": {"type": "number", "nullable": true, "minimum": -93.2, "maximum": 61.8, "unit": "degC", "unit_field": "temperature_unit"},
+    "temperature_qc": {"type": "string", "allowed": ["0", "1", "2", "3", "4", "5", "6", "7", "9", "A", "C", "I", "M", "P", "R", "U"]},
+    "sea_level_pressure_hpa": {"type": "number", "required": false, "nullable": true, "minimum": 860.0, "maximum": 1090.0, "unit": "hPa", "unit_field": "slp_unit"},
+    "slp_qc": {"type": "string", "required": false, "allowed": ["0", "1", "2", "3", "4", "5", "6", "7", "9", "A", "C", "I", "M", "P", "R", "U"]}
+  }
+}

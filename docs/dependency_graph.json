@@ -1,0 +1,201 @@
+{
+  "nodes": [
+    {
+      "id": "observation_id",
+      "kind": "variable",
+      "classification": "METADATA"
+    },
+    {
+      "id": "observed_at",
+      "kind": "variable",
+      "classification": "COORDINATE"
+    },
+    {
+      "id": "station_id",
+      "kind": "variable",
+      "classification": "METADATA"
+    },
+    {
+      "id": "raw_temperature_c",
+      "kind": "variable",
+      "classification": "RAW_ACQUISITION"
+    },
+    {
+      "id": "qc_flag",
+      "kind": "variable",
+      "classification": "QUALITY_CONTROL"
+    },
+    {
+      "id": "calibration_scale",
+      "kind": "variable",
+      "classification": "CALIBRATION_DATA"
+    },
+    {
+      "id": "calibration_offset_c",
+      "kind": "variable",
+      "classification": "CALIBRATION_DATA"
+    },
+    {
+      "id": "calibrated_temperature_c",
+      "kind": "variable",
+      "classification": "CALIBRATED_MEASUREMENT"
+    },
+    {
+      "id": "temperature_k",
+      "kind": "variable",
+      "classification": "SCIENTIFIC_INTERMEDIATE"
+    },
+    {
+      "id": "qc_valid_temperature_k",
+      "kind": "variable",
+      "classification": "SCIENTIFIC_INTERMEDIATE"
+    },
+    {
+      "id": "daily_mean_temperature_k",
+      "kind": "variable",
+      "classification": "DERIVED_PRODUCT"
+    },
+    {
+      "id": "valid_observation_count",
+      "kind": "variable",
+      "classification": "QUALITY_CONTROL"
+    },
+    {
+      "id": "T001",
+      "kind": "transformation",
+      "label": "apply_temporal_calibration"
+    },
+    {
+      "id": "T002",
+      "kind": "transformation",
+      "label": "celsius_to_kelvin"
+    },
+    {
+      "id": "T003",
+      "kind": "transformation",
+      "label": "good_only_quality_gate"
+    },
+    {
+      "id": "T004",
+      "kind": "transformation",
+      "label": "daily_arithmetic_mean"
+    },
+    {
+      "id": "src/database_pipeline.py::build_daily_temperature_product.calibrated CTE",
+      "kind": "code",
+      "label": "build_daily_temperature_product.calibrated CTE"
+    },
+    {
+      "id": "src/database_pipeline.py::KELVIN_OFFSET and build_daily_temperature_product.valid_kelvin CTE",
+      "kind": "code",
+      "label": "KELVIN_OFFSET and build_daily_temperature_product.valid_kelvin CTE"
+    },
+    {
+      "id": "src/database_pipeline.py::build_daily_temperature_product.valid_kelvin CTE",
+      "kind": "code",
+      "label": "build_daily_temperature_product.valid_kelvin CTE"
+    },
+    {
+      "id": "src/database_pipeline.py::build_daily_temperature_product final SELECT",
+      "kind": "code",
+      "label": "build_daily_temperature_product final SELECT"
+    }
+  ],
+  "edges": [
+    {
+      "from": "raw_temperature_c",
+      "to": "T001",
+      "relation": "input_to"
+    },
+    {
+      "from": "calibration_scale",
+      "to": "T001",
+      "relation": "input_to"
+    },
+    {
+      "from": "calibration_offset_c",
+      "to": "T001",
+      "relation": "input_to"
+    },
+    {
+      "from": "observed_at",
+      "to": "T001",
+      "relation": "input_to"
+    },
+    {
+      "from": "T001",
+      "to": "calibrated_temperature_c",
+      "relation": "produces"
+    },
+    {
+      "from": "calibrated_temperature_c",
+      "to": "T002",
+      "relation": "input_to"
+    },
+    {
+      "from": "T002",
+      "to": "temperature_k",
+      "relation": "produces"
+    },
+    {
+      "from": "temperature_k",
+      "to": "T003",
+      "relation": "input_to"
+    },
+    {
+      "from": "qc_flag",
+      "to": "T003",
+      "relation": "input_to"
+    },
+    {
+      "from": "T003",
+      "to": "qc_valid_temperature_k",
+      "relation": "produces"
+    },
+    {
+      "from": "qc_valid_temperature_k",
+      "to": "T004",
+      "relation": "input_to"
+    },
+    {
+      "from": "observed_at",
+      "to": "T004",
+      "relation": "input_to"
+    },
+    {
+      "from": "station_id",
+      "to": "T004",
+      "relation": "input_to"
+    },
+    {
+      "from": "T004",
+      "to": "daily_mean_temperature_k",
+      "relation": "produces"
+    },
+    {
+      "from": "T004",
+      "to": "valid_observation_count",
+      "relation": "produces"
+    },
+    {
+      "from": "src/database_pipeline.py::build_daily_temperature_product.calibrated CTE",
+      "to": "T001",
+      "relation": "implements"
+    },
+    {
+      "from": "src/database_pipeline.py::KELVIN_OFFSET and build_daily_temperature_product.valid_kelvin CTE",
+      "to": "T002",
+      "relation": "implements"
+    },
+    {
+      "from": "src/database_pipeline.py::build_daily_temperature_product.valid_kelvin CTE",
+      "to": "T003",
+      "relation": "implements"
+    },
+    {
+      "from": "src/database_pipeline.py::build_daily_temperature_product final SELECT",
+      "to": "T004",
+      "relation": "implements"
+    }
+  ]
+}

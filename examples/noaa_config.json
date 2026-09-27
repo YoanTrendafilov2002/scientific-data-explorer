@@ -1,0 +1,11 @@
+{
+  "path": "noaa_lga_20240101.json",
+  "format": "noaa-global-hourly",
+  "units": {"temperature_c": "degC"},
+  "metadata": {
+    "provider": "NOAA NCEI",
+    "source_url": "https://www.ncei.noaa.gov/access/services/data/v1?dataset=global-hourly&stations=72503014732&startDate=2024-01-01&endDate=2024-01-01&format=json",
+    "retrieved_on": "2026-09-26",
+    "description": "Native Global Hourly API response; LaGuardia, 2024-01-01. No units conversion requested."
+  }
+}

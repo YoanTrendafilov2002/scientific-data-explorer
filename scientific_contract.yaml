@@ -1,0 +1,184 @@
+{
+  "contract_version": "1.0.0",
+  "title": "Generic scientific observation database contract",
+  "scope": "One demonstrator pipeline: raw temperature observations to QC-gated calibrated daily means in kelvin.",
+  "data_source": {
+    "kind": "relational_scientific_database",
+    "demo_engine": "SQLite",
+    "portable_targets": ["PostgreSQL", "DuckDB", "CSV-backed query engines"],
+    "description": "A generic long-form observation database with separate calibration and derived-product tables.",
+    "measurement_domain": "environmental observations",
+    "directly_stored_quantities": ["raw_value", "observation timestamp", "station identifier", "variable identifier", "QC flag"],
+    "expected_scientific_products": ["calibrated_temperature_c", "temperature_k", "daily_mean_temperature_k"],
+    "sampling_characteristics": {
+      "cadence": "irregular in the generic model; four illustrative samples per day in the fixture",
+      "aggregation_period": "UTC calendar day",
+      "time_standard": "UTC"
+    },
+    "calibration": {
+      "model": "affine: calibrated = raw * scale + offset",
+      "selection": "latest record whose valid_from is not later than observed_at",
+      "key": ["station_id", "variable_id", "valid_from"]
+    },
+    "operating_assumptions": [
+      "raw timestamps include a UTC designator",
+      "calibration records are immutable and temporally versioned",
+      "only QC flag GOOD is admissible to the published daily mean",
+      "air-temperature inputs for this pipeline use degrees Celsius"
+    ]
+  },
+  "files": [
+    {"path": "reference/input.sql", "role": "RAW_NATIVE_DATABASE_FIXTURE", "format": "SQL", "description": "Reference raw observations and calibration records."},
+    {"path": "reference/expected_daily_temperature.csv", "role": "PROCESSED_SCIENTIFIC_PRODUCT", "format": "CSV", "description": "Independently specified regression target."},
+    {"path": "scientific_contract.yaml", "role": "METADATA_CONFIGURATION", "format": "JSON-compatible YAML", "description": "Machine-readable scientific contract."}
+  ],
+  "tables": [
+    {"name": "raw_observations", "classification": "RAW_ACQUISITION", "primary_key": ["observation_id"]},
+    {"name": "calibrations", "classification": "CALIBRATION_DATA", "primary_key": ["station_id", "variable_id", "valid_from"]},
+    {"name": "daily_temperature_products", "classification": "DERIVED_PRODUCT", "primary_key": ["day", "station_id", "variable_id"]}
+  ],
+  "variables": [
+    {
+      "id": "observation_id", "name": "observation_id", "description": "Stable source-row identifier.",
+      "classification": "METADATA", "processing_level": "L0", "datatype": "integer", "units": "1",
+      "dimensions": ["observation"], "expected_range": {"minimum": 1}, "source": "raw_observations.observation_id",
+      "dependencies": [], "associated_qc_variables": []
+    },
+    {
+      "id": "observed_at", "name": "observed_at", "description": "UTC observation timestamp.",
+      "classification": "COORDINATE", "processing_level": "L0", "datatype": "ISO-8601 string", "units": "UTC",
+      "dimensions": ["observation"], "expected_range": null, "source": "raw_observations.observed_at",
+      "dependencies": [], "associated_qc_variables": ["qc_flag"]
+    },
+    {
+      "id": "station_id", "name": "station_id", "description": "Location or platform identifier.",
+      "classification": "METADATA", "processing_level": "L0", "datatype": "string", "units": "1",
+      "dimensions": ["observation"], "expected_range": null, "source": "raw_observations.station_id",
+      "dependencies": [], "associated_qc_variables": []
+    },
+    {
+      "id": "raw_temperature_c", "name": "raw_value", "description": "Uncalibrated air-temperature reading.",
+      "classification": "RAW_ACQUISITION", "processing_level": "L0", "datatype": "float64", "units": "degC",
+      "dimensions": ["observation"], "expected_range": {"minimum": -100.0, "maximum": 100.0},
+      "source": "raw_observations.raw_value WHERE variable_id='air_temperature'",
+      "dependencies": [], "associated_qc_variables": ["qc_flag"]
+    },
+    {
+      "id": "qc_flag", "name": "qc_flag", "description": "Source quality decision.",
+      "classification": "QUALITY_CONTROL", "processing_level": "L0", "datatype": "enum", "units": "1",
+      "dimensions": ["observation"], "expected_range": {"allowed": ["GOOD", "SUSPECT", "BAD"]},
+      "source": "raw_observations.qc_flag", "dependencies": [], "associated_qc_variables": []
+    },
+    {
+      "id": "calibration_scale", "name": "scale", "description": "Multiplicative calibration coefficient.",
+      "classification": "CALIBRATION_DATA", "processing_level": "L1", "datatype": "float64", "units": "1",
+      "dimensions": ["station", "variable", "calibration_version"], "expected_range": {"minimum": 0.5, "maximum": 1.5},
+      "source": "calibrations.scale", "dependencies": ["station_id", "observed_at"], "associated_qc_variables": []
+    },
+    {
+      "id": "calibration_offset_c", "name": "offset", "description": "Additive calibration coefficient.",
+      "classification": "CALIBRATION_DATA", "processing_level": "L1", "datatype": "float64", "units": "degC",
+      "dimensions": ["station", "variable", "calibration_version"], "expected_range": {"minimum": -20.0, "maximum": 20.0},
+      "source": "calibrations.offset", "dependencies": ["station_id", "observed_at"], "associated_qc_variables": []
+    },
+    {
+      "id": "calibrated_temperature_c", "name": "calibrated_temperature_c", "description": "Affine-calibrated temperature.",
+      "classification": "CALIBRATED_MEASUREMENT", "processing_level": "L1", "datatype": "float64", "units": "degC",
+      "dimensions": ["observation"], "expected_range": {"minimum": -100.0, "maximum": 100.0}, "source": "T001",
+      "dependencies": ["raw_temperature_c", "calibration_scale", "calibration_offset_c"], "associated_qc_variables": ["qc_flag"]
+    },
+    {
+      "id": "temperature_k", "name": "temperature_k", "description": "Calibrated thermodynamic temperature.",
+      "classification": "SCIENTIFIC_INTERMEDIATE", "processing_level": "L2", "datatype": "float64", "units": "K",
+      "dimensions": ["observation"], "expected_range": {"minimum": 173.15, "maximum": 373.15}, "source": "T002",
+      "dependencies": ["calibrated_temperature_c"], "associated_qc_variables": ["qc_flag"]
+    },
+    {
+      "id": "qc_valid_temperature_k", "name": "qc_valid_temperature_k", "description": "Thermodynamic temperature admitted by the publication QC policy.",
+      "classification": "SCIENTIFIC_INTERMEDIATE", "processing_level": "L2", "datatype": "float64", "units": "K",
+      "dimensions": ["observation"], "expected_range": {"minimum": 173.15, "maximum": 373.15}, "source": "T003",
+      "dependencies": ["temperature_k", "qc_flag"], "associated_qc_variables": ["qc_flag"]
+    },
+    {
+      "id": "daily_mean_temperature_k", "name": "daily_mean_temperature_k", "description": "Mean of GOOD calibrated samples for one UTC day.",
+      "classification": "DERIVED_PRODUCT", "processing_level": "L3", "datatype": "float64", "units": "K",
+      "dimensions": ["day", "station", "variable"], "expected_range": {"minimum": 173.15, "maximum": 373.15},
+      "source": "daily_temperature_products.daily_mean_temperature_k", "dependencies": ["temperature_k", "qc_flag"],
+      "associated_qc_variables": ["valid_observation_count"]
+    },
+    {
+      "id": "valid_observation_count", "name": "valid_observation_count", "description": "Count of GOOD observations in a daily product.",
+      "classification": "QUALITY_CONTROL", "processing_level": "L3", "datatype": "integer", "units": "1",
+      "dimensions": ["day", "station", "variable"], "expected_range": {"minimum": 1},
+      "source": "daily_temperature_products.valid_observation_count", "dependencies": ["qc_flag"], "associated_qc_variables": []
+    }
+  ],
+  "transformations": [
+    {
+      "id": "T001", "name": "apply_temporal_calibration", "inputs": ["raw_temperature_c", "calibration_scale", "calibration_offset_c", "observed_at"],
+      "outputs": ["calibrated_temperature_c"], "description": "Join the latest applicable station-variable calibration and apply an affine correction.",
+      "equation": "T_cal_C = T_raw_C * scale + offset_C", "input_units": ["degC", "1", "degC"], "output_units": ["degC"],
+      "constants": {}, "scientific_assumptions": ["calibration coefficients remain valid until superseded"],
+      "calibration_dependencies": ["calibrations"], "quality_control_dependencies": [], "upstream_transformations": [],
+      "downstream_transformations": ["T002"], "implementation_file": "src/database_pipeline.py", "implementation_symbol": "build_daily_temperature_product.calibrated CTE",
+      "reference_result": "reference/expected_daily_temperature.csv", "validation_tolerance": {"absolute": 1e-9, "relative": 1e-12}
+    },
+    {
+      "id": "T002", "name": "celsius_to_kelvin", "inputs": ["calibrated_temperature_c"], "outputs": ["temperature_k"],
+      "description": "Convert degrees Celsius to kelvin using the exact scale offset.", "equation": "T_K = T_C + 273.15",
+      "input_units": ["degC"], "output_units": ["K"], "constants": {"kelvin_offset": {"value": 273.15, "units": "K"}},
+      "scientific_assumptions": ["Celsius and kelvin have equal interval size"], "calibration_dependencies": [],
+      "quality_control_dependencies": [], "upstream_transformations": ["T001"], "downstream_transformations": ["T003", "T004"],
+      "implementation_file": "src/database_pipeline.py", "implementation_symbol": "KELVIN_OFFSET and valid_kelvin CTE",
+      "reference_result": "reference/expected_daily_temperature.csv", "validation_tolerance": {"absolute": 1e-9, "relative": 1e-12}
+    },
+    {
+      "id": "T003", "name": "good_only_quality_gate", "inputs": ["temperature_k", "qc_flag"], "outputs": ["qc_valid_temperature_k"],
+      "description": "Admit only observations explicitly marked GOOD.", "equation": "include iff qc_flag = 'GOOD'",
+      "input_units": ["K", "1"], "output_units": ["K"], "constants": {}, "scientific_assumptions": [],
+      "calibration_dependencies": [], "quality_control_dependencies": ["qc_flag"], "upstream_transformations": ["T002"],
+      "downstream_transformations": ["T004"], "implementation_file": "src/database_pipeline.py", "implementation_symbol": "valid_kelvin CTE WHERE clause",
+      "reference_result": "reference/expected_daily_temperature.csv", "validation_tolerance": {"absolute": 0, "relative": 0}
+    },
+    {
+      "id": "T004", "name": "daily_arithmetic_mean", "inputs": ["qc_valid_temperature_k", "observed_at", "station_id"],
+      "outputs": ["daily_mean_temperature_k", "valid_observation_count"], "description": "Group GOOD observations by UTC date, station, and variable; calculate count and arithmetic mean.",
+      "equation": "mean_K = sum(T_K) / N_good", "input_units": ["K", "UTC", "1"], "output_units": ["K", "1"],
+      "constants": {}, "scientific_assumptions": ["samples carry equal statistical weight"], "calibration_dependencies": [],
+      "quality_control_dependencies": ["T003"], "upstream_transformations": ["T002", "T003"], "downstream_transformations": [],
+      "implementation_file": "src/database_pipeline.py", "implementation_symbol": "build_daily_temperature_product final SELECT",
+      "reference_result": "reference/expected_daily_temperature.csv", "validation_tolerance": {"absolute": 1e-9, "relative": 1e-12}
+    }
+  ],
+  "validation_rules": [
+    {"id": "V001", "category": "schema", "description": "Required contract sections exist.", "severity": "error"},
+    {"id": "V002", "category": "required_channels", "description": "Raw observation and calibration tables contain required columns.", "severity": "error"},
+    {"id": "V003", "category": "timestamp_shape", "description": "Observation timestamps are valid UTC ISO-8601 strings.", "severity": "error"},
+    {"id": "V004", "category": "expected_range", "description": "Raw and derived temperature values fall inside contract ranges.", "severity": "error"},
+    {"id": "V005", "category": "units", "description": "The pipeline accepts degC and emits K.", "severity": "error"},
+    {"id": "V006", "category": "quality_control", "description": "Only GOOD observations contribute to products.", "severity": "error"},
+    {"id": "V007", "category": "transformation_consistency", "description": "The Celsius-to-kelvin offset equals 273.15.", "severity": "error"},
+    {"id": "V008", "category": "regression", "description": "Every product row matches the reference output within tolerance.", "severity": "error"},
+    {"id": "V009", "category": "data_shape", "description": "Product primary keys are unique and counts are positive.", "severity": "error"}
+  ],
+  "reference_datasets": [
+    {"id": "R001", "input": "reference/input.sql", "expected_output": "reference/expected_daily_temperature.csv", "provenance": "Synthetic, deterministic fixture authored for the hackathon; contains no personal or confidential data.", "purpose": "Regression and controlled-failure demonstration."}
+  ],
+  "assumptions": [
+    {"id": "A001", "statement": "The fixture is illustrative and does not claim to represent a particular instrument or observing network."},
+    {"id": "A002", "statement": "GOOD, SUSPECT, and BAD are ordered policy labels; only GOOD is publication eligible."},
+    {"id": "A003", "statement": "Daily aggregation uses UTC dates and equal sample weights."},
+    {"id": "A004", "statement": "The kelvin offset is exactly 273.15 for this conversion."}
+  ],
+  "quality_rules": [
+    {"id": "Q001", "variable": "qc_flag", "allowed": ["GOOD", "SUSPECT", "BAD"], "product_inclusion": ["GOOD"]},
+    {"id": "Q002", "variable": "valid_observation_count", "minimum": 1},
+    {"id": "Q003", "rule": "A product must not be emitted without an applicable calibration record."}
+  ],
+  "code_mappings": [
+    {"scientific_concept": "temporal calibration", "transformation": "T001", "file": "src/database_pipeline.py", "symbol": "build_daily_temperature_product.calibrated CTE"},
+    {"scientific_concept": "Celsius-to-kelvin conversion", "transformation": "T002", "file": "src/database_pipeline.py", "symbol": "KELVIN_OFFSET and build_daily_temperature_product.valid_kelvin CTE"},
+    {"scientific_concept": "publication QC gate", "transformation": "T003", "file": "src/database_pipeline.py", "symbol": "build_daily_temperature_product.valid_kelvin CTE"},
+    {"scientific_concept": "daily mean temperature", "transformation": "T004", "file": "src/database_pipeline.py", "symbol": "build_daily_temperature_product final SELECT"}
+  ]
+}

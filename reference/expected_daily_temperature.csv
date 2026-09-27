@@ -1,0 +1,4 @@
+day,station_id,variable_id,valid_observation_count,daily_mean_temperature_k
+2026-09-25,STATION_A,air_temperature,3,293.07
+2026-09-25,STATION_B,air_temperature,2,290.196
+2026-09-26,STATION_A,air_temperature,2,295.074

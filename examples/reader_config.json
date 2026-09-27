@@ -1,0 +1,6 @@
+{
+  "path": "reader_data.json",
+  "columns": {"site": "station_id", "time": "observed_at", "temperature": "value", "quality": "qc_flag"},
+  "units": {"value": "degC"},
+  "metadata": {"provenance": "Synthetic reader example, not NOAA data", "processing_level": "unspecified"}
+}
